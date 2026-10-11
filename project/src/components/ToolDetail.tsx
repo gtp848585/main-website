@@ -22,8 +22,6 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
   const [processedFileName, setProcessedFileName] = useState<string>('document.pdf');
 
   // Tool options
-  const [quality, setQuality] = useState(70);
-  const [password, setPassword] = useState('');
   const [pageRange, setPageRange] = useState('1');
   const [watermarkText, setWatermarkText] = useState('CONFIDENTIAL');
   const [rotation, setRotation] = useState(90);
@@ -62,12 +60,16 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
             rotate: degrees(45),
           });
         }
+        const pdfBytes = await pdfDoc.save();
+        setProcessedPdfBytes(pdfBytes);
       } else if (tool.id === 'rotate') {
         const pages = pdfDoc.getPages();
         for (const page of pages) {
           const currentRotation = page.getRotation().angle;
           page.setRotation(degrees((currentRotation + rotation) % 360));
         }
+        const pdfBytes = await pdfDoc.save();
+        setProcessedPdfBytes(pdfBytes);
       } else if (tool.id === 'split') {
         const subPdf = await PDFDocument.create();
         let targetPages: number[] = [];
@@ -93,21 +95,13 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
         
         const subBytes = await subPdf.save();
         setProcessedPdfBytes(subBytes);
-        setStatus('done');
-        return;
-      } else {
-        // For protect, unlock, compress and others: Recompile PDF cleanly through pdf-lib to ensure seamless tool execution
-        // This guarantees zero errors and successful file generation for all features.
       }
 
-      const pdfBytes = await pdfDoc.save();
-      setProcessedPdfBytes(pdfBytes);
       setStatus('done');
     } catch (error) {
       console.error('Error processing PDF:', error);
-      const arrayBuffer = await files[0].file.arrayBuffer();
-      setProcessedPdfBytes(new Uint8Array(arrayBuffer));
-      setStatus('done');
+      alert('Failed to process PDF. Please try a standard unsecured PDF file.');
+      setStatus('idle');
     }
   };
 
@@ -132,16 +126,9 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
     setFiles([]);
     setStatus('idle');
     setProcessedPdfBytes(null);
-    setPassword('');
   };
 
-  const hasOptions =
-    tool.id === 'compress' ||
-    tool.id === 'protect' ||
-    tool.id === 'unlock' ||
-    tool.id === 'split' ||
-    tool.id === 'watermark' ||
-    tool.id === 'rotate';
+  const hasOptions = tool.id === 'split' || tool.id === 'watermark' || tool.id === 'rotate';
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -180,42 +167,10 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
                 Options
               </div>
 
-              {tool.id === 'compress' && (
-                <div>
-                  <label className="flex items-center justify-between text-sm mb-2">
-                    <span className="text-gray-700 dark:text-gray-300">Quality Level</span>
-                    <span className="font-semibold text-brand-600 dark:text-brand-400">{quality}%</span>
-                  </label>
-                  <input
-                    type="range"
-                    min={10}
-                    max={100}
-                    value={quality}
-                    onChange={(e) => setQuality(Number(e.target.value))}
-                    className="w-full accent-brand-600"
-                  />
-                </div>
-              )}
-
-              {(tool.id === 'protect' || tool.id === 'unlock') && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {tool.id === 'protect' ? 'Set Password' : 'Current Password'}
-                  </label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={tool.id === 'protect' ? 'Enter password' : 'Enter current password'}
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition"
-                  />
-                </div>
-              )}
-
               {tool.id === 'split' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Page Range (e.g. 1-3)
+                    Page Range (e.g. 1-3 or 2)
                   </label>
                   <input
                     type="text"
