@@ -1,4 +1,4 @@
-import { Stamp, RotateCw, Scissors, Image as ImageIcon } from 'lucide-react';
+import { Stamp, RotateCw, Scissors, Image as ImageIcon, Merge } from 'lucide-react';
 
 export interface Tool {
   id: string;
@@ -15,6 +15,15 @@ export const CATEGORIES = [
 ];
 
 export const TOOLS: Tool[] = [
+  {
+    id: 'merge',
+    name: 'Merge PDF',
+    description: 'Combine multiple PDF documents into a single unified PDF file in your preferred order.',
+    icon: Merge,
+    color: 'from-blue-600 to-cyan-600',
+    accept: { 'application/pdf': ['.pdf'] },
+    multiFile: true,
+  },
   {
     id: 'image-to-pdf',
     name: 'Image to PDF',
