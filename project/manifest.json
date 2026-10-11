@@ -1,0 +1,16 @@
+{
+  "name": "PDFKit Hub",
+  "short_name": "PDFKit",
+  "description": "Every tool you need to work with PDFs securely in your browser.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
