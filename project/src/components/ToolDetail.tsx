@@ -36,26 +36,28 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
   const handleProcess = () => {
     if (files.length === 0) return;
     setStatus('processing');
-    // Simulate processing & generate downloadable dummy/processed PDF blob
+    // Simulate processing
     setTimeout(() => setStatus('done'), 2000);
   };
 
   const handleDownload = () => {
-    if (files.length === 0) return;
+    const targetFile = files[0]?.file;
+    
+    // Fallback valid PDF byte array if file reference is empty
+    const pdfData = targetFile || new Blob([
+      '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 595 842]/Parent 2 0 R>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000009 00000 n\n0000000058 00000 n\n0000000115 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n168\n%%EOF'
+    ], { type: 'application/pdf' });
 
-    // Use the first uploaded file or generate a dummy processed PDF blob
-    const originalFile = files[0].file;
-    const blob = new Blob([originalFile], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-
+    const url = URL.createObjectURL(pdfData);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `processed_${files[0].name || 'document.pdf'}`;
+    link.download = files[0]?.name ? `processed_${files[0].name}` : `processed_document.pdf`;
+    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     
-    setTimeout(() => URL.revokeObjectURL(url), 100);
+    setTimeout(() => URL.revokeObjectURL(url), 200);
   };
 
   const reset = () => {
