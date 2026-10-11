@@ -24,7 +24,7 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
   // Tool options
   const [quality, setQuality] = useState(70);
   const [password, setPassword] = useState('');
-  const [pageRange, setPageRange] = useState('1-3');
+  const [pageRange, setPageRange] = useState('1');
   const [watermarkText, setWatermarkText] = useState('CONFIDENTIAL');
   const [rotation, setRotation] = useState(90);
 
@@ -47,9 +47,10 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
       
       const arrayBuffer = await fileObj.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
-      const pages = pdfDoc.getPages();
+      const totalPages = pdfDoc.getPageCount();
 
       if (tool.id === 'watermark') {
+        const pages = pdfDoc.getPages();
         for (const page of pages) {
           const { width, height } = page.getSize();
           page.drawText(watermarkText || 'CONFIDENTIAL', {
@@ -64,14 +65,45 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
         const pdfBytes = await pdfDoc.save();
         setProcessedPdfBytes(pdfBytes);
       } else if (tool.id === 'rotate') {
+        const pages = pdfDoc.getPages();
         for (const page of pages) {
           const currentRotation = page.getRotation().angle;
           page.setRotation(degrees((currentRotation + rotation) % 360));
         }
         const pdfBytes = await pdfDoc.save();
         setProcessedPdfBytes(pdfBytes);
+      } else if (tool.id === 'split') {
+        // Parse page range like "1-3" or single page "2"
+        const subPdf = await PDFDocument.create();
+        let targetPages: number[] = [];
+
+        if (pageRange.includes('-')) {
+          const [start, end] = pageRange.split('-').map((n) => parseInt(n.trim(), 10));
+          if (!isNaN(start) && !isNaN(end)) {
+            for (let i = start; i <= end; i++) {
+              if (i >= 1 && i <= totalPages) targetPages.push(i - 1);
+            }
+          }
+        } else {
+          const pageNum = parseInt(pageRange.trim(), 10);
+          if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+            targetPages.push(pageNum - 1);
+          }
+        }
+
+        if (targetPages.length === 0) {
+          targetPages = [0]; // Default to first page if range is invalid
+        }
+
+        const copiedPages = await subPdf.copyPages(pdfDoc, targetPages);
+        copiedPages.forEach((p) => subPdf.addPage(p));
+
+        const subBytes = await subPdf.save();
+        setProcessedPdfBytes(subBytes);
+      } else if (tool.id === 'compress') {
+        const pdfBytes = await pdfDoc.save({ useObjectStreams: true });
+        setProcessedPdfBytes(pdfBytes);
       } else {
-        // For protect, unlock, compress, split etc. ensure smooth secure processing output
         const pdfBytes = await pdfDoc.save();
         setProcessedPdfBytes(pdfBytes);
       }
@@ -79,7 +111,6 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
       setStatus('done');
     } catch (error) {
       console.error('Error processing PDF:', error);
-      // Fallback to original file bytes if any advanced parsing hits limitation
       const arrayBuffer = await files[0].file.arrayBuffer();
       setProcessedPdfBytes(new Uint8Array(arrayBuffer));
       setStatus('done');
@@ -190,13 +221,13 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
               {tool.id === 'split' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Page Range
+                    Page Range (e.g. 1-3)
                   </label>
                   <input
                     type="text"
                     value={pageRange}
                     onChange={(e) => setPageRange(e.target.value)}
-                    placeholder="e.g. 1-3, 5, 8-10"
+                    placeholder="e.g. 1-3"
                     className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition"
                   />
                 </div>
