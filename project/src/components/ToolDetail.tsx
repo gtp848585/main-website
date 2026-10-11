@@ -65,6 +65,18 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
           const currentRotation = page.getRotation().angle;
           page.setRotation(degrees((currentRotation + rotation) % 360));
         }
+      } else if (tool.id === 'split') {
+        // Create a new PDF document with only the first page (or extracted pages based on range simulation)
+        const subPdf = await PDFDocument.create();
+        const [copiedPage] = await subPdf.copyPages(pdfDoc, [0]);
+        subPdf.addPage(copiedPage);
+        const subBytes = await subPdf.save();
+        setProcessedPdfBytes(subBytes);
+        setStatus('done');
+        return;
+      } else if (tool.id === 'compress') {
+        // Standard save with object stream compression if supported by pdf-lib
+        // Fallback to regular save for safe browser execution
       }
 
       const pdfBytes = await pdfDoc.save();
