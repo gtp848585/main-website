@@ -12,7 +12,6 @@ export interface Tool {
 
 export const CATEGORIES = [
   { id: 'all', name: 'All Tools' },
-  { id: 'popular', name: 'Popular' },
 ];
 
 export const TOOLS: Tool[] = [
