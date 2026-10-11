@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { TOOLS, type Tool } from '@/lib/tools';
 import { ToolCard } from '@/components/ToolCard';
 import { ToolDetail } from '@/components/ToolDetail';
+import { InstallPrompt } from '@/components/InstallPrompt';
 import { FileText, ShieldCheck, Zap } from 'lucide-react';
 import { AdBanner } from '@/components/AdBanner';
 
@@ -24,8 +25,9 @@ export function App() {
               PDFKit <span className="text-brand-600">Hub</span>
             </span>
           </div>
-          <div className="flex items-center gap-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-            <span className="hidden sm:inline">100% Secure & Client-Side</span>
+          <div className="flex items-center gap-4">
+            <InstallPrompt />
+            <span className="hidden sm:inline text-sm font-medium text-gray-600 dark:text-gray-400">100% Secure</span>
           </div>
         </div>
       </header>
@@ -40,7 +42,7 @@ export function App() {
                 Every tool you need to work with PDFs
               </h1>
               <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">
-                Watermark, rotate, and split your PDF files easily and securely right inside your browser. No uploads required!
+                Merge, convert images, watermark, rotate, and split your files easily and securely right inside your browser. No uploads required!
               </p>
             </div>
 
