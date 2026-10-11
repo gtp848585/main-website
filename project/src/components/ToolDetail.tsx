@@ -27,7 +27,7 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
   const [rotation, setRotation] = useState(90);
 
   const addFiles = (newFiles: UploadedFile[]) => {
-    setFiles((prev) => [...prev, ...newFiles]);
+    setFiles((prev) => (tool.multiFile ? [...prev, ...newFiles] : newFiles));
   };
 
   const removeFile = (id: string) => {
@@ -39,6 +39,35 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
     setStatus('processing');
 
     try {
+      if (tool.id === 'image-to-pdf') {
+        setProcessedFileName('converted_images.pdf');
+        const pdfDoc = await PDFDocument.create();
+
+        for (const fileItem of files) {
+          const imageBytes = await fileItem.file.arrayBuffer();
+          let embeddedImage;
+          
+          if (fileItem.file.type === 'image/png') {
+            embeddedImage = await pdfDoc.embedPng(imageBytes);
+          } else {
+            embeddedImage = await pdfDoc.embedJpg(imageBytes);
+          }
+
+          const page = pdfDoc.addPage([embeddedImage.width, embeddedImage.height]);
+          page.drawImage(embeddedImage, {
+            x: 0,
+            y: 0,
+            width: embeddedImage.width,
+            height: embeddedImage.height,
+          });
+        }
+
+        const pdfBytes = await pdfDoc.save();
+        setProcessedPdfBytes(pdfBytes);
+        setStatus('done');
+        return;
+      }
+
       const fileObj = files[0].file;
       const originalName = files[0].name || 'document.pdf';
       setProcessedFileName(`${tool.id}_${originalName}`);
@@ -99,8 +128,8 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
 
       setStatus('done');
     } catch (error) {
-      console.error('Error processing PDF:', error);
-      alert('Failed to process PDF. Please try a standard unsecured PDF file.');
+      console.error('Error processing file:', error);
+      alert('Failed to process file. Please try standard formats.');
       setStatus('idle');
     }
   };
@@ -241,7 +270,7 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
               </div>
               <h3 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">Processing Complete!</h3>
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                Your {tool.name.toLowerCase()} result is ready to download.
+                Your file is ready to download.
               </p>
               <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
                 <button
@@ -249,7 +278,7 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
                   className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-700 transition"
                 >
                   <Download className="h-4 w-4" />
-                  Download Processed PDF
+                  Download Processed File
                 </button>
                 <button
                   onClick={reset}
