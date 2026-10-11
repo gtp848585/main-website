@@ -39,6 +39,23 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
     setStatus('processing');
 
     try {
+      if (tool.id === 'merge') {
+        setProcessedFileName('merged_document.pdf');
+        const mergedPdf = await PDFDocument.create();
+
+        for (const fileItem of files) {
+          const fileBytes = await fileItem.file.arrayBuffer();
+          const pdfDoc = await PDFDocument.load(fileBytes);
+          const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+          copiedPages.forEach((page) => mergedPdf.addPage(page));
+        }
+
+        const pdfBytes = await mergedPdf.save();
+        setProcessedPdfBytes(pdfBytes);
+        setStatus('done');
+        return;
+      }
+
       if (tool.id === 'image-to-pdf') {
         setProcessedFileName('converted_images.pdf');
         const pdfDoc = await PDFDocument.create();
