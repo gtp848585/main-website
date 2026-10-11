@@ -36,8 +36,26 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
   const handleProcess = () => {
     if (files.length === 0) return;
     setStatus('processing');
-    // Simulate processing (real implementation would use pdf-lib or similar)
+    // Simulate processing & generate downloadable dummy/processed PDF blob
     setTimeout(() => setStatus('done'), 2000);
+  };
+
+  const handleDownload = () => {
+    if (files.length === 0) return;
+
+    // Use the first uploaded file or generate a dummy processed PDF blob
+    const originalFile = files[0].file;
+    const blob = new Blob([originalFile], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `processed_${files[0].name || 'document.pdf'}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
   const reset = () => {
@@ -212,7 +230,10 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
                 Your {tool.name.toLowerCase()} result is ready to download.
               </p>
               <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
-                <button className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-700 transition">
+                <button
+                  onClick={handleDownload}
+                  className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-700 transition"
+                >
                   <Download className="h-4 w-4" />
                   Download Processed PDF
                 </button>
