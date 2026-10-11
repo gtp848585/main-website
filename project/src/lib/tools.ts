@@ -1,4 +1,4 @@
-import { FileText, Stamp, RotateCw, Scissors } from 'lucide-react';
+import { Stamp, RotateCw, Scissors } from 'lucide-react';
 
 export interface Tool {
   id: string;
@@ -10,7 +10,7 @@ export interface Tool {
   multiFile: boolean;
 }
 
-export const tools: Tool[] = [
+export const TOOLS: Tool[] = [
   {
     id: 'watermark',
     name: 'Watermark PDF',
