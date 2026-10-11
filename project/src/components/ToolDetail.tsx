@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, Loader2, CheckCircle2, Download, Settings2, RotateCw } from 'lucide-react';
-import { PDFDocument, rgb, degrees } from 'pdf-lib';
+import { PDFDocument, rgb, degrees, StandardFonts } from 'pdf-lib';
 import type { Tool } from '@/lib/tools';
 import type { UploadedFile } from '@/lib/types';
 import { FileDropzone } from './FileDropzone';
@@ -33,7 +33,7 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
   };
 
   const removeFile = (id: string) => {
-    setFiles((prev) => tendo.filter((f) => f.id !== id));
+    setFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
   // Real PDF Processing using pdf-lib
@@ -51,14 +51,21 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
 
       if (tool.id === 'watermark') {
         const pages = pdfDoc.getPages();
+        const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        
         for (const page of pages) {
           const { width, height } = page.getSize();
-          page.drawText(watermarkText, {
-            x: width / 4,
+          const text = watermarkText || 'CONFIDENTIAL';
+          const fontSize = 48;
+          const textWidth = font.widthOfTextAtSize(text, fontSize);
+          
+          page.drawText(text, {
+            x: (width - textWidth) / 2,
             y: height / 2,
-            size: 50,
-            color: rgb(0.75, 0.75, 0.75),
-            opacity: 0.4,
+            size: fontSize,
+            font: font,
+            color: rgb(0.6, 0.6, 0.6),
+            opacity: 0.5,
             rotate: degrees(45),
           });
         }
@@ -69,7 +76,6 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
           page.setRotation(degrees((currentRotation + rotation) % 360));
         }
       }
-      // Add more tool logic here as needed (compress, protect, etc.)
 
       const pdfBytes = await pdfDoc.save();
       setProcessedPdfBytes(pdfBytes);
