@@ -1,4 +1,4 @@
-import { Stamp, RotateCw, Scissors } from 'lucide-react';
+import { Stamp, RotateCw, Scissors, Image as ImageIcon } from 'lucide-react';
 
 export interface Tool {
   id: string;
@@ -15,6 +15,15 @@ export const CATEGORIES = [
 ];
 
 export const TOOLS: Tool[] = [
+  {
+    id: 'image-to-pdf',
+    name: 'Image to PDF',
+    description: 'Convert JPG, PNG or image files into a clean PDF document instantly.',
+    icon: ImageIcon,
+    color: 'from-purple-500 to-pink-600',
+    accept: { 'image/*': ['.jpg', '.jpeg', '.png'] },
+    multiFile: true,
+  },
   {
     id: 'watermark',
     name: 'Watermark PDF',
