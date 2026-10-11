@@ -13,7 +13,7 @@ export function FileDropzone({ accept, multiFile = false, onFiles }: FileDropzon
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       const newFiles: UploadedFile[] = acceptedFiles.map((file) => ({
-        id: Math.random().toString(36.substring(2, 9)),
+        id: Math.random().toString(36).substring(2, 9),
         file,
         name: file.name,
         size: file.size,
