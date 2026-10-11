@@ -3,11 +3,20 @@ import { TOOLS, type Tool } from '@/lib/tools';
 import { ToolCard } from '@/components/ToolCard';
 import { ToolDetail } from '@/components/ToolDetail';
 import { InstallPrompt } from '@/components/InstallPrompt';
+import { About } from '@/components/About';
+import { Contact } from '@/components/Contact';
 import { FileText, ShieldCheck, Zap } from 'lucide-react';
 import { AdBanner } from '@/components/AdBanner';
 
 export function App() {
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
+  const [currentView, setCurrentView] = useState<'home' | 'about' | 'contact'>('home');
+
+  const handleNav = (view: 'home' | 'about' | 'contact') => {
+    setSelectedTool(null);
+    setCurrentView(view);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 flex flex-col">
@@ -15,7 +24,7 @@ export function App() {
       <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-30">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div 
-            onClick={() => setSelectedTool(null)}
+            onClick={() => handleNav('home')}
             className="flex items-center gap-3 cursor-pointer"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white shadow-md">
@@ -27,14 +36,25 @@ export function App() {
           </div>
           <div className="flex items-center gap-4">
             <InstallPrompt />
-            <span className="hidden sm:inline text-sm font-medium text-gray-600 dark:text-gray-400">100% Secure</span>
+            <button 
+              onClick={() => handleNav('contact')}
+              className="hidden sm:inline text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-brand-600 transition"
+            >
+              Contact
+            </button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="flex-1">
-        {!selectedTool ? (
+        {selectedTool ? (
+          <ToolDetail tool={selectedTool} onBack={() => setSelectedTool(null)} />
+        ) : currentView === 'about' ? (
+          <About onBack={() => handleNav('home')} />
+        ) : currentView === 'contact' ? (
+          <Contact onBack={() => handleNav('home')} />
+        ) : (
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
             {/* Hero Section */}
             <div className="text-center max-w-3xl mx-auto mb-12">
@@ -75,7 +95,7 @@ export function App() {
                   <Zap className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white">Lightning Fast</h3>
+                  <h3 className="other font-semibold text-gray-900 dark:text-white">Lightning Fast</h3>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">No waiting for large uploads or server queue times. Instant results.</p>
                 </div>
               </div>
@@ -90,15 +110,18 @@ export function App() {
               </div>
             </div>
           </div>
-        ) : (
-          <ToolDetail tool={selectedTool} onBack={() => setSelectedTool(null)} />
         )}
       </main>
 
       {/* Footer */}
       <footer className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-8">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center text-sm text-gray-500 dark:text-gray-400">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500 dark:text-gray-400">
           <p>© {new Date().getFullYear()} PDFKit Hub. All rights reserved.</p>
+          <div className="flex items-center gap-6">
+            <button onClick={() => handleNav('home')} className="hover:text-brand-600 transition">Home</button>
+            <button onClick={() => handleNav('about')} className="hover:text-brand-600 transition">About Us</button>
+            <button onClick={() => handleNav('contact')} className="hover:text-brand-600 transition">Contact Us</button>
+          </div>
         </div>
       </footer>
     </div>
