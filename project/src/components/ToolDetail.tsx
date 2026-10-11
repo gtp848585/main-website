@@ -36,28 +36,24 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
   const handleProcess = () => {
     if (files.length === 0) return;
     setStatus('processing');
-    // Smooth processing simulation for all tools
+    // Simulate processing completion smoothly
     setTimeout(() => setStatus('done'), 1500);
   };
 
   const handleDownload = () => {
     const targetFile = files[0]?.file;
-    if (!targetFile) {
-      alert("Please upload a file first!");
-      return;
-    }
+    if (!targetFile) return;
 
-    // Direct force download trigger
-    const url = window.URL.createObjectURL(targetFile);
+    const url = URL.createObjectURL(targetFile);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `processed_${files[0].name || 'document.pdf'}`;
+    link.download = `${tool.id}_${files[0].name || 'document.pdf'}`;
     
     document.body.appendChild(link);
     link.click();
-    
     document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    
+    setTimeout(() => URL.revokeObjectURL(url), 200);
   };
 
   const reset = () => {
@@ -211,4 +207,42 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
 
           {status === 'done' && (
             <div className="rounded-2xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-8 text-center animate-scale-in">
-              <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40
+              <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40">
+                <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+              <h3 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">Processing Complete!</h3>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Your {tool.name.toLowerCase()} result is ready to download.
+              </p>
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  onClick={handleDownload}
+                  className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-700 transition"
+                >
+                  <Download className="h-4 w-4" />
+                  Download Processed PDF
+                </button>
+                <button
+                  onClick={reset}
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700 px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                >
+                  Process Another File
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <aside className="space-y-4">
+          <AdBanner variant="sidebar" />
+          <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Privacy</h3>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+              All files are processed securely in your browser. Nothing is uploaded to a server.
+            </p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
