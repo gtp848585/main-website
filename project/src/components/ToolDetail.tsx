@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, Loader2, CheckCircle2, Download, Settings2, RotateCw } from 'lucide-react';
+import { PDFDocument, rgb, degrees } from 'pdf-lib';
 import type { Tool } from '@/lib/tools';
 import type { UploadedFile } from '@/lib/types';
 import { FileDropzone } from './FileDropzone';
@@ -17,6 +18,8 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
   const Icon = tool.icon;
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [status, setStatus] = useState<ProcessingState>('idle');
+  const [processedPdfBytes, setProcessedPdfBytes] = useState<Uint8Array | null>(null);
+  const [processedFileName, setProcessedFileName] = useState<string>('document.pdf');
 
   // Tool-specific options
   const [quality, setQuality] = useState(70);
@@ -30,28 +33,62 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
   };
 
   const removeFile = (id: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== id));
+    setFiles((prev) => tendo.filter((f) => f.id !== id));
   };
 
-  const handleProcess = () => {
+  // Real PDF Processing using pdf-lib
+  const handleProcess = async () => {
     if (files.length === 0) return;
     setStatus('processing');
-    // Simulate processing
-    setTimeout(() => setStatus('done'), 2000);
+
+    try {
+      const fileObj = files[0].file;
+      setProcessedFileName(`processed_${files[0].name}`);
+      const arrayBuffer = await fileObj.arrayBuffer();
+
+      // Load PDF into pdf-lib
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
+
+      if (tool.id === 'watermark') {
+        const pages = pdfDoc.getPages();
+        for (const page of pages) {
+          const { width, height } = page.getSize();
+          page.drawText(watermarkText, {
+            x: width / 4,
+            y: height / 2,
+            size: 50,
+            color: rgb(0.75, 0.75, 0.75),
+            opacity: 0.4,
+            rotate: degrees(45),
+          });
+        }
+      } else if (tool.id === 'rotate') {
+        const pages = pdfDoc.getPages();
+        for (const page of pages) {
+          const currentRotation = page.getRotation().angle;
+          page.setRotation(degrees((currentRotation + rotation) % 360));
+        }
+      }
+      // Add more tool logic here as needed (compress, protect, etc.)
+
+      const pdfBytes = await pdfDoc.save();
+      setProcessedPdfBytes(pdfBytes);
+      setStatus('done');
+    } catch (error) {
+      console.error('Error processing PDF:', error);
+      alert('Failed to process PDF. Please try a different file.');
+      setStatus('idle');
+    }
   };
 
   const handleDownload = () => {
-    const targetFile = files[0]?.file;
-    
-    // Fallback valid PDF byte array if file reference is empty
-    const pdfData = targetFile || new Blob([
-      '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 595 842]/Parent 2 0 R>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000009 00000 n\n0000000058 00000 n\n0000000115 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n168\n%%EOF'
-    ], { type: 'application/pdf' });
+    if (!processedPdfBytes) return;
 
-    const url = URL.createObjectURL(pdfData);
+    const blob = new Blob([processedPdfBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = files[0]?.name ? `processed_${files[0].name}` : `processed_document.pdf`;
+    link.download = processedFileName;
     
     document.body.appendChild(link);
     link.click();
@@ -63,6 +100,7 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
   const reset = () => {
     setFiles([]);
     setStatus('idle');
+    setProcessedPdfBytes(null);
   };
 
   const hasOptions =
@@ -74,7 +112,6 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-      {/* Breadcrumb / back */}
       <button
         onClick={onBack}
         className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition mb-6"
@@ -84,9 +121,7 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
       </button>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
-        {/* Main column */}
         <div className="space-y-6">
-          {/* Tool header */}
           <div className="flex items-start gap-4">
             <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${tool.color} text-white shadow-md`}>
               <Icon className="h-7 w-7" />
@@ -97,75 +132,20 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
             </div>
           </div>
 
-          {/* Upload zone */}
           {status !== 'done' && (
             <FileDropzone accept={tool.accept} multiFile={tool.multiFile} onFiles={addFiles} />
           )}
 
-          {/* File list */}
           {files.length > 0 && status !== 'done' && (
             <UploadedFileList files={files} onRemove={removeFile} />
           )}
 
-          {/* Tool-specific options */}
           {files.length > 0 && hasOptions && status === 'idle' && (
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 space-y-5 animate-fade-in">
               <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
                 <Settings2 className="h-4 w-4 text-brand-600 dark:text-brand-400" />
                 Options
               </div>
-
-              {tool.id === 'compress' && (
-                <div>
-                  <label className="flex items-center justify-between text-sm mb-2">
-                    <span className="text-gray-700 dark:text-gray-300">Quality Level</span>
-                    <span className="font-semibold text-brand-600 dark:text-brand-400">{quality}%</span>
-                  </label>
-                  <input
-                    type="range"
-                    min={10}
-                    max={100}
-                    value={quality}
-                    onChange={(e) => setQuality(Number(e.target.value))}
-                    className="w-full accent-brand-600"
-                  />
-                  <div className="flex justify-between text-xs text-gray-400 mt-1">
-                    <span>Smaller file</span>
-                    <span>Higher quality</span>
-                  </div>
-                </div>
-              )}
-
-              {(tool.id === 'protect' || tool.id === 'unlock') && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {tool.id === 'protect' ? 'Password' : 'Current Password'}
-                  </label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={tool.id === 'protect' ? 'Enter a password' : 'Enter the current password'}
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition"
-                  />
-                </div>
-              )}
-
-              {tool.id === 'split' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Page Range
-                  </label>
-                  <input
-                    type="text"
-                    value={pageRange}
-                    onChange={(e) => setPageRange(e.target.value)}
-                    placeholder="e.g. 1-3, 5, 8-10"
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition"
-                  />
-                  <p className="mt-2 text-xs text-gray-400">Specify pages to extract, using ranges or individual numbers.</p>
-                </div>
-              )}
 
               {tool.id === 'watermark' && (
                 <div>
@@ -201,7 +181,6 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
             </div>
           )}
 
-          {/* Process button */}
           {files.length > 0 && status === 'idle' && (
             <button
               onClick={handleProcess}
@@ -212,7 +191,6 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
             </button>
           )}
 
-          {/* Processing state */}
           {status === 'processing' && (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-12 animate-fade-in">
               <Loader2 className="h-12 w-12 animate-spin text-brand-600 dark:text-brand-400" />
@@ -221,7 +199,6 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
             </div>
           )}
 
-          {/* Success state */}
           {status === 'done' && (
             <div className="rounded-2xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-8 text-center animate-scale-in">
               <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40">
@@ -250,33 +227,12 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
           )}
         </div>
 
-        {/* Sidebar */}
         <aside className="space-y-4">
           <AdBanner variant="sidebar" />
-
-          <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">How it works</h3>
-            <ol className="mt-3 space-y-2.5">
-              {[
-                'Upload your file(s)',
-                'Adjust options if needed',
-                'Click Process',
-                'Download the result',
-              ].map((step, i) => (
-                <li key={i} className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-400">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-900/40 text-xs font-bold text-brand-700 dark:text-brand-300">
-                    {i + 1}
-                  </span>
-                  {step}
-                </li>
-              ))}
-            </ol>
-          </div>
-
           <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Privacy</h3>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-              All files are processed locally in your browser. Nothing is uploaded to a server.
+              All files are processed locally in your browser using pdf-lib. Nothing is uploaded to a server.
             </p>
           </div>
         </aside>
