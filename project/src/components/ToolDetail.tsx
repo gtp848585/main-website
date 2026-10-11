@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, Loader2, CheckCircle2, Download, Settings2, RotateCw } from 'lucide-react';
+import { PDFDocument, rgb, degrees } from 'pdf-lib';
 import type { Tool } from '@/lib/tools';
 import type { UploadedFile } from '@/lib/types';
 import { FileDropzone } from './FileDropzone';
@@ -17,6 +18,8 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
   const Icon = tool.icon;
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [status, setStatus] = useState<ProcessingState>('idle');
+  const [processedPdfBytes, setProcessedPdfBytes] = useState<Uint8Array | null>(null);
+  const [processedFileName, setProcessedFileName] = useState<string>('document.pdf');
 
   // Tool-specific options
   const [quality, setQuality] = useState(70);
@@ -33,20 +36,56 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
     setFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
-  const handleProcess = () => {
+  const handleProcess = async () => {
     if (files.length === 0) return;
     setStatus('processing');
-    setTimeout(() => setStatus('done'), 1500);
+
+    try {
+      const fileObj = files[0].file;
+      setProcessedFileName(`${tool.id}_${files[0].name || 'document.pdf'}`);
+      const arrayBuffer = await fileObj.arrayBuffer();
+
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
+      const pages = pdfDoc.getPages();
+
+      if (tool.id === 'watermark') {
+        for (const page of pages) {
+          const { width, height } = page.getSize();
+          page.drawText(watermarkText || 'CONFIDENTIAL', {
+            x: width / 6,
+            y: height / 2,
+            size: 45,
+            color: rgb(0.6, 0.6, 0.6),
+            opacity: 0.45,
+            rotate: degrees(45),
+          });
+        }
+      } else if (tool.id === 'rotate') {
+        for (const page of pages) {
+          const currentRotation = page.getRotation().angle;
+          page.setRotation(degrees((currentRotation + rotation) % 360));
+        }
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      setProcessedPdfBytes(pdfBytes);
+      setStatus('done');
+    } catch (error) {
+      console.error('Error processing PDF:', error);
+      alert('Processing failed. Please try a valid PDF file.');
+      setStatus('idle');
+    }
   };
 
   const handleDownload = () => {
-    const targetFile = files[0]?.file;
-    if (!targetFile) return;
+    const targetData = processedPdfBytes || files[0]?.file;
+    if (!targetData) return;
 
-    const url = URL.createObjectURL(targetFile);
+    const blob = new Blob([targetData], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${tool.id}_${files[0].name || 'document.pdf'}`;
+    link.download = processedFileName;
     
     document.body.appendChild(link);
     link.click();
@@ -58,6 +97,7 @@ export function ToolDetail({ tool, onBack }: ToolDetailProps) {
   const reset = () => {
     setFiles([]);
     setStatus('idle');
+    setProcessedPdfBytes(null);
   };
 
   const hasOptions =
